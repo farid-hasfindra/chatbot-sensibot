@@ -1,64 +1,288 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect } from "react";
+import { v4 as uuidv4 } from "uuid";
+import Sidebar, { ChatHistoryItem } from "@/components/Sidebar";
+import ChatArea, { Message } from "@/components/ChatArea";
+import ChatInput from "@/components/ChatInput";
+import { api } from "@/lib/api";
+import { ChevronDown, Menu } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 export default function Home() {
+  const { data: session, status } = useSession();
+  
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // State for responsive sidebar
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  // Chat History & Mode state
+  const [history, setHistory] = useState<ChatHistoryItem[]>([]);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  
+  // If guest, use a transient ID. If logged in, use DB ID.
+  const [transientId] = useState(() => uuidv4()); 
+  
+  // Model selection state — IDs must match Groq model names accepted by the llm-wrapper backend
+  const AVAILABLE_MODELS = [
+    // Llama family (Meta)
+    { id: "llama-3.3-70b-versatile",    name: "Llama 3.3 70B",       provider: "Meta" },
+    { id: "llama-3.1-8b-instant",       name: "Llama 3.1 8B Instant", provider: "Meta" },
+    // Gemma family (Google)
+    { id: "gemma2-9b-it",               name: "Gemma 2 9B",           provider: "Google" },
+    // Mixtral (Mistral AI)
+    { id: "mixtral-8x7b-32768",         name: "Mixtral 8x7B",         provider: "Mistral" },
+    // Qwen (Alibaba)
+    { id: "qwen-qwq-32b",               name: "Qwen QwQ 32B",         provider: "Alibaba" },
+  ];
+  const [selectedModelObj, setSelectedModelObj] = useState(AVAILABLE_MODELS[0]);
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+
+  const [chatTitle, setChatTitle] = useState("Obrolan Baru");
+
+  // Load history when session is valid
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchHistory();
+    } else {
+      setHistory([]);
+    }
+  }, [status]);
+
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch("/api/chats");
+      if (res.ok) {
+        const data = await res.json();
+        setHistory(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleSelectChat = async (id: string, title: string) => {
+    setCurrentChatId(id);
+    setChatTitle(title);
+    setMessages([]);
+    setIsLoading(true);
+
+    try {
+      const res = await fetch(`/api/chats/${id}/messages`);
+      if (res.ok) {
+        const dbMessages = await res.json();
+        // Convert DB format to UI format
+        const formatted: Message[] = dbMessages.map((m: any) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          model: m.model,
+          metadata: {
+            rag_enabled: m.isRag,
+            usage: m.tokens ? { total_tokens: m.tokens } : undefined,
+          }
+        }));
+        setMessages(formatted);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleNewChat = () => {
+    setCurrentChatId(null);
+    setMessages([]);
+    setChatTitle("Obrolan Baru");
+    if (window.innerWidth < 768) setIsSidebarOpen(false);
+  };
+
+  // Called by Sidebar after rename or delete
+  const handleHistoryChange = async () => {
+    await fetchHistory();
+    // If the currently open chat was deleted, reset to blank state
+    const updatedHistory = await fetch('/api/chats').then(r => r.ok ? r.json() : []);
+    const stillExists = updatedHistory.some((c: ChatHistoryItem) => c.id === currentChatId);
+    if (!stillExists) {
+      setCurrentChatId(null);
+      setMessages([]);
+      setChatTitle("Obrolan Baru");
+    }
+  };
+
+  const handleSendMessage = async (content: string) => {
+    // RAG is OFF by default. Turn on only when user has uploaded documents.
+    const useRag = false;
+
+    // Build conversation history from the last 6 messages so the AI remembers prior turns
+    const currentMessages = messages;
+    const historyContext = currentMessages
+      .slice(-6)
+      .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+      .join('\n');
+
+    // Prepend history to the current message if it exists
+    const messageWithHistory = historyContext.length > 0
+      ? `Previous conversation:\n${historyContext}\n\nUser: ${content}`
+      : content;
+
+    // Local UI update (display the clean user message, not the one with injected history)
+    const userMsg: Message = { id: uuidv4(), role: "user", content };
+    setMessages((prev) => [...prev, userMsg]);
+    setIsLoading(true);
+
+    let activeChatId = currentChatId;
+    let isNewDB = false;
+
+    try {
+      // 1. If logged in and no chat selected, create one in DB
+      if (status === "authenticated" && !activeChatId) {
+        const newTitle = content.substring(0, 30);
+        const res = await fetch("/api/chats", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: newTitle }),
+        });
+        if (res.ok) {
+          const chatData = await res.json();
+          activeChatId = chatData.id;
+          setCurrentChatId(activeChatId);
+          setChatTitle(newTitle);
+          isNewDB = true;
+        }
+      }
+
+      // 2. Save user message to DB
+      if (status === "authenticated" && activeChatId) {
+        const r = await fetch(`/api/chats/${activeChatId}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role: "user", content }),
+        });
+        if (!r.ok) console.error("[save user msg] failed:", r.status, await r.text());
+      }
+
+      // 3. Call external Python AI backend with history-aware message
+      const backendId = activeChatId || transientId;
+      const apiRes = await api.chat(messageWithHistory, useRag, backendId, selectedModelObj.id);
+
+      // 4. Save AI Response to DB
+      if (status === "authenticated" && activeChatId) {
+        const r = await fetch(`/api/chats/${activeChatId}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            role: "assistant",
+            content: apiRes.response,
+            tokens: apiRes.usage?.total_tokens ?? null,
+            model: selectedModelObj.id,
+            isRag: apiRes.rag_enabled,
+          }),
+        });
+        if (!r.ok) console.error("[save ai msg] failed:", r.status, await r.text());
+      }
+
+      // 5. Update UI for AI
+      const aiMsg: Message = {
+        id: uuidv4(),
+        role: "assistant",
+        content: apiRes.response,
+        metadata: apiRes,
+        model: selectedModelObj.name,
+      };
+      setMessages((prev) => [...prev, aiMsg]);
+
+      if (isNewDB) fetchHistory();
+      
+    } catch (error) {
+      console.error(error);
+      const errorMsg: Message = {
+        id: uuidv4(),
+        role: "assistant",
+        content: "Oops! Sepertinya terjadi kesalahan.",
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="flex h-screen w-full bg-[#0b0f19] overflow-hidden font-sans">
+      <Sidebar 
+        onNewChat={handleNewChat}
+        isOpen={isSidebarOpen}
+        toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        history={history}
+        currentChatId={currentChatId}
+        onSelectChat={handleSelectChat}
+        onHistoryChange={handleHistoryChange}
+      />
+
+      <main className="flex-1 flex flex-col min-w-0 relative h-full">
+        <header className="h-14 flex items-center justify-between px-4 sticky top-0 bg-[#0b0f19]/80 backdrop-blur-md z-10 border-b border-white/5">
+          <div className="flex items-center gap-3 text-slate-300">
+            <button onClick={() => setIsSidebarOpen(true)} className="md:hidden hover:text-white">
+              <Menu size={20} />
+            </button>
+            <div className="hidden md:flex items-center gap-2 max-w-sm">
+              <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+              <span className="text-sm font-semibold truncate text-white">{chatTitle}</span>
+            </div>
+          </div>
+          
+          <div className="relative">
+            <div 
+              onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
+              className="cursor-pointer flex items-center gap-2 bg-[#131722] border border-white/10 hover:bg-[#1e2336] transition-colors py-1.5 px-3 rounded-xl text-xs sm:text-sm font-medium text-slate-200"
+            >
+              <div className="w-4 h-4 rounded-sm bg-indigo-500 flex items-center justify-center text-[10px] text-white shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              </div>
+              {selectedModelObj.name}
+              <ChevronDown size={14} className="text-slate-500 ml-1" />
+            </div>
+
+            {isModelMenuOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40"
+                  onClick={() => setIsModelMenuOpen(false)}
+                />
+                <div className="absolute right-0 top-full mt-2 w-56 bg-[#1e2336] border border-white/10 rounded-xl shadow-xl z-50 py-1 overflow-hidden">
+                  {AVAILABLE_MODELS.map(model => (
+                    <button
+                      key={model.id}
+                      onClick={() => {
+                        setSelectedModelObj(model);
+                        setIsModelMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2.5 transition-colors flex items-center justify-between gap-2 ${
+                        selectedModelObj.id === model.id 
+                          ? 'bg-indigo-500/10 text-indigo-400' 
+                          : 'text-slate-300 hover:bg-white/5'
+                      }`}
+                    >
+                      <span className="text-sm font-medium">{model.name}</span>
+                      <span className="text-[10px] text-slate-500 shrink-0">{model.provider}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </header>
+
+        <ChatArea messages={messages} isLoading={isLoading} selectedModel={selectedModelObj.name} />
+        
+        <ChatInput 
+          onSendMessage={handleSendMessage} 
+          isLoading={isLoading} 
+          onDocumentUploaded={() => console.log('Doc uploaded')} 
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
       </main>
     </div>
   );
