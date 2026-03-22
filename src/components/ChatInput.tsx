@@ -117,7 +117,7 @@ export default function ChatInput({ onSendMessage, isLoading, onDocumentUploaded
               onKeyDown={handleKeyDown}
               placeholder="Apa yang ingin Anda pertanyakan?"
               disabled={isLoading || isUploading}
-              className="w-full bg-transparent border-0 resize-none px-2 text-[15px] text-white focus:ring-0 placeholder:text-slate-500 max-h-[200px] overflow-y-auto disabled:opacity-50"
+              className="w-full bg-transparent border-none border-0 resize-none px-2 text-[15px] text-white outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 placeholder:text-slate-500 max-h-[200px] overflow-y-auto disabled:opacity-50 ring-0 hover:border-none focus:border-none"
               rows={1}
             />
           </div>
