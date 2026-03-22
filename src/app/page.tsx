@@ -21,6 +21,7 @@ export default function Home() {
   // Chat History & Mode state
   const [history, setHistory] = useState<ChatHistoryItem[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [generatingChatId, setGeneratingChatId] = useState<string | null>(null);
   
   // If guest, use a transient ID. If logged in, use DB ID.
   const [transientId] = useState(() => uuidv4()); 
@@ -113,6 +114,34 @@ export default function Home() {
     }
   };
 
+  const generateChatTitle = async (chatId: string, userMsg: string, aiMsg: string, modelId: string) => {
+    try {
+      const prompt = `Buatkan judul super singkat (maksimal 6 kata) tanpa tanda kutip untuk percakapan ini:\n\nUser: ${userMsg}\nAI: ${aiMsg}\n\nJudul Singkat:`;
+      const res = await api.chat(prompt, false, `title-gen-${chatId}`, modelId);
+      if (res.response) {
+        let newTitle = res.response.replace(/["*]/g, '').trim();
+        // Fallback length check
+        if (newTitle.length > 40) newTitle = newTitle.substring(0, 40) + "...";
+
+        // Update DB
+        await fetch(`/api/chats/${chatId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: newTitle }),
+        });
+        
+        // Update local state if the user is still on this chat
+        setCurrentChatId((prev) => {
+          if (prev === chatId) setChatTitle(newTitle);
+          return prev;
+        });
+        fetchHistory(); // refresh the sidebar
+      }
+    } catch (e) {
+      console.error("Failed to generate title", e);
+    }
+  };
+
   const handleSendMessage = async (content: string) => {
     // RAG is OFF by default. Turn on only when user has uploaded documents.
     const useRag = false;
@@ -140,7 +169,7 @@ export default function Home() {
     try {
       // 1. If logged in and no chat selected, create one in DB
       if (status === "authenticated" && !activeChatId) {
-        const newTitle = content.substring(0, 30);
+        const newTitle = "Obrolan Baru";
         const res = await fetch("/api/chats", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -195,7 +224,14 @@ export default function Home() {
       };
       setMessages((prev) => [...prev, aiMsg]);
 
-      if (isNewDB) fetchHistory();
+      if (isNewDB && activeChatId) {
+        // Fire and forget title generation in background
+        setGeneratingChatId(activeChatId);
+        generateChatTitle(activeChatId, content, apiRes.response, selectedModelObj.id).finally(() => {
+          setGeneratingChatId(null);
+        });
+        fetchHistory();
+      }
       
     } catch (error) {
       console.error(error);
@@ -220,6 +256,7 @@ export default function Home() {
         currentChatId={currentChatId}
         onSelectChat={handleSelectChat}
         onHistoryChange={handleHistoryChange}
+        generatingChatId={generatingChatId}
       />
 
       <main className="flex-1 flex flex-col min-w-0 relative h-full">

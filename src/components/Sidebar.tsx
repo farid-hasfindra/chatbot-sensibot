@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
-import { Plus, MessageSquare, Menu, Zap, LogOut, LogIn, MoreHorizontal, Pencil, Trash2, X, Check } from 'lucide-react';
+import { Plus, MessageSquare, Menu, Zap, LogOut, LogIn, MoreHorizontal, Pencil, Trash2, X, Check, Loader2, Search } from 'lucide-react';
 import { signOut, useSession } from "next-auth/react";
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -20,10 +20,11 @@ interface SidebarProps {
   currentChatId: string | null;
   onSelectChat: (id: string, title: string) => void;
   onHistoryChange: () => void; // refresh history after rename/delete
+  generatingChatId?: string | null;
 }
 
 export default function Sidebar({
-  onNewChat, isOpen, toggleSidebar, history, currentChatId, onSelectChat, onHistoryChange
+  onNewChat, isOpen, toggleSidebar, history, currentChatId, onSelectChat, onHistoryChange, generatingChatId
 }: SidebarProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function Sidebar({
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -119,8 +121,24 @@ export default function Sidebar({
         </div>
 
         {/* History List */}
-        <div className="flex-1 overflow-y-auto px-4 py-2 mt-4" ref={menuRef}>
-          <h2 className="text-[10px] font-bold text-slate-500 tracking-widest uppercase mb-3 px-2">Riwayat</h2>
+        <div className="flex-1 overflow-y-auto px-4 py-2 mt-2" ref={menuRef}>
+          <div className="flex items-center justify-between mb-3 px-2">
+            <h2 className="text-[10px] font-bold text-slate-500 tracking-widest uppercase">Riwayat</h2>
+          </div>
+
+          {/* Search Bar */}
+          {status === "authenticated" && history.length > 0 && (
+            <div className="relative mb-4">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input
+                type="text"
+                placeholder="Cari obrolan..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-[#1e2336]/50 border border-white/5 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 focus:bg-[#1e2336] transition-all"
+              />
+            </div>
+          )}
 
           {status === "unauthenticated" ? (
             <div className="px-2 py-4 text-center text-sm text-slate-500 border border-dashed border-white/10 rounded-xl">
@@ -133,9 +151,11 @@ export default function Sidebar({
             <p className="px-2 text-xs text-slate-500">Belum ada obrolan.</p>
           ) : (
             <div className="space-y-1 mt-1">
-              {history.map((chat) => (
-                <div
-                  key={chat.id}
+              {history
+                .filter(chat => chat.title.toLowerCase().includes(searchQuery.toLowerCase()))
+                .map((chat) => (
+                  <div
+                    key={chat.id}
                   className={`group relative flex items-center rounded-xl transition-colors
                     ${currentChatId === chat.id ? 'bg-indigo-500/10' : 'hover:bg-white/5'}
                   `}
@@ -170,13 +190,25 @@ export default function Sidebar({
                           if (window.innerWidth < 768) toggleSidebar();
                         }}
                       >
-                        <MessageSquare
-                          size={16}
-                          className={`shrink-0 ${currentChatId === chat.id ? 'text-indigo-400' : 'text-slate-500'}`}
-                        />
-                        <span className={`truncate ${currentChatId === chat.id ? 'text-indigo-300' : 'text-slate-300'}`}>
-                          {chat.title}
-                        </span>
+                        {generatingChatId === chat.id ? (
+                          <>
+                            <div className="relative flex items-center justify-center w-4 h-4 shrink-0">
+                              <div className="absolute inset-0 rounded-full border-2 border-indigo-500/20"></div>
+                              <div className="absolute inset-0 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin"></div>
+                            </div>
+                            <div className="h-4 w-32 bg-gradient-to-r from-indigo-500/10 via-purple-500/20 to-indigo-500/10 rounded-md animate-pulse" />
+                          </>
+                        ) : (
+                          <>
+                            <MessageSquare
+                              size={16}
+                              className={`shrink-0 ${currentChatId === chat.id ? 'text-indigo-400' : 'text-slate-500'}`}
+                            />
+                            <span className={`truncate ${currentChatId === chat.id ? 'text-indigo-300' : 'text-slate-300'}`}>
+                              {chat.title}
+                            </span>
+                          </>
+                        )}
                       </button>
 
                       {/* Three-dot button — visible on hover or when menu is open */}
