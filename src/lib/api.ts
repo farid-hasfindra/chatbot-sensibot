@@ -17,7 +17,8 @@ export const api = {
     message: string,
     useRag: boolean,
     conversationId: string | null = null,
-    model: string | null = null
+    model: string | null = null,
+    systemPrompt: string | null = null
   ): Promise<ChatResponse> => {
     const res = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
@@ -29,6 +30,7 @@ export const api = {
         use_rag: useRag,
         conversation_id: conversationId,
         ...(model && { model }),
+        ...(systemPrompt && { system_prompt: systemPrompt }),
       }),
     });
     

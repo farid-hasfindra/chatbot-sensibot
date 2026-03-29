@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import Sidebar, { ChatHistoryItem } from "@/components/Sidebar";
 import ChatArea, { Message } from "@/components/ChatArea";
 import ChatInput from "@/components/ChatInput";
+import PersonaSelector from "@/components/PersonaSelector";
 import { api } from "@/lib/api";
 import { ChevronDown, Menu } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -42,15 +43,48 @@ export default function Home() {
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
 
   const [chatTitle, setChatTitle] = useState("Obrolan Baru");
+  const [personaPrompt, setPersonaPrompt] = useState<string | null>(null);
 
   // Load history when session is valid
   useEffect(() => {
     if (status === "authenticated") {
       fetchHistory();
+      fetchPersona();
     } else {
       setHistory([]);
+      setPersonaPrompt(null);
+      setMessages([]);
+      setCurrentChatId(null);
+      setChatTitle("Obrolan Baru");
     }
   }, [status]);
+
+  const fetchPersona = async () => {
+    try {
+      const res = await fetch("/api/user/persona");
+      if (res.ok) {
+        const data = await res.json();
+        setPersonaPrompt(data.systemPrompt);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleSelectPersona = async (prompt: string) => {
+    setPersonaPrompt(prompt);
+    if (status === "authenticated") {
+      try {
+        await fetch("/api/user/persona", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ systemPrompt: prompt })
+        });
+      } catch (e) {
+        console.error("Failed to save persona", e);
+      }
+    }
+  };
 
   const fetchHistory = async () => {
     try {
@@ -196,7 +230,7 @@ export default function Home() {
 
       // 3. Call external Python AI backend with history-aware message
       const backendId = activeChatId || transientId;
-      const apiRes = await api.chat(messageWithHistory, useRag, backendId, selectedModelObj.id);
+      const apiRes = await api.chat(messageWithHistory, useRag, backendId, selectedModelObj.id, personaPrompt);
 
       // 4. Save AI Response to DB
       if (status === "authenticated" && activeChatId) {
@@ -271,11 +305,14 @@ export default function Home() {
             </div>
           </div>
           
-          <div className="relative">
-            <div 
-              onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
-              className="cursor-pointer flex items-center gap-2 bg-[#131722] border border-white/10 hover:bg-[#1e2336] transition-colors py-1.5 px-3 rounded-xl text-xs sm:text-sm font-medium text-slate-200"
-            >
+          <div className="flex items-center gap-2">
+            <PersonaSelector currentPrompt={personaPrompt} onSelect={handleSelectPersona} />
+            
+            <div className="relative">
+              <div 
+                onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
+                className="cursor-pointer flex items-center gap-2 bg-[#131722] border border-white/10 hover:bg-[#1e2336] transition-colors py-1.5 px-3 rounded-xl text-xs sm:text-sm font-medium text-slate-200"
+              >
               <div className="w-4 h-4 rounded-sm bg-indigo-500 flex items-center justify-center text-[10px] text-white shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
               </div>
@@ -310,6 +347,7 @@ export default function Home() {
                 </div>
               </>
             )}
+            </div>
           </div>
         </header>
 
