@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
   try {
+    const params = await props.params;
+    const id = params.id;
     const session = await getServerSession(authOptions);
     const userId = (session?.user as any)?.id as string | undefined;
     
@@ -19,13 +21,13 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const { prisma } = await import("@/lib/prisma");
 
     // Ensure they own it
-    const existing = await prisma.customPersona.findUnique({ where: { id: params.id } });
+    const existing = await prisma.customPersona.findUnique({ where: { id } });
     if (!existing || existing.userId !== userId) {
       return NextResponse.json({ message: "Not found or unauthorized" }, { status: 404 });
     }
     
     const updatedPersona = await prisma.customPersona.update({
-      where: { id: params.id },
+      where: { id },
       data: { name, prompt }
     });
 
@@ -36,8 +38,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
   try {
+    const params = await props.params;
+    const id = params.id;
     const session = await getServerSession(authOptions);
     const userId = (session?.user as any)?.id as string | undefined;
     
@@ -47,13 +51,13 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
     const { prisma } = await import("@/lib/prisma");
 
-    const existing = await prisma.customPersona.findUnique({ where: { id: params.id } });
+    const existing = await prisma.customPersona.findUnique({ where: { id } });
     if (!existing || existing.userId !== userId) {
       return NextResponse.json({ message: "Not found or unauthorized" }, { status: 404 });
     }
     
     await prisma.customPersona.delete({
-      where: { id: params.id }
+      where: { id }
     });
 
     return NextResponse.json({ message: "Deleted successfully" });
