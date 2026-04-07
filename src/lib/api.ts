@@ -20,7 +20,7 @@ export const api = {
     model: string | null = null,
     systemPrompt: string | null = null
   ): Promise<ChatResponse> => {
-    const res = await fetch(`${API_BASE_URL}/chat`, {
+    const res = await fetch(`/api/chat/proxy`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -35,6 +35,10 @@ export const api = {
     });
     
     if (!res.ok) {
+      if (res.status === 429) {
+        const errorData = await res.json().catch(() => ({}));
+        throw Object.assign(new Error(errorData.message || 'Batas limit harian telah tercapai.'), { isLimitExceeded: true });
+      }
       throw new Error('Failed to send message');
     }
     

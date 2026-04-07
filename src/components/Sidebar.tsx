@@ -19,12 +19,13 @@ interface SidebarProps {
   history: ChatHistoryItem[];
   currentChatId: string | null;
   onSelectChat: (id: string, title: string) => void;
-  onHistoryChange: () => void; // refresh history after rename/delete
+  onHistoryChange: () => void;
   generatingChatId?: string | null;
+  rateLimit?: { count: number; limit: number };
 }
 
 export default function Sidebar({
-  onNewChat, isOpen, toggleSidebar, history, currentChatId, onSelectChat, onHistoryChange, generatingChatId
+  onNewChat, isOpen, toggleSidebar, history, currentChatId, onSelectChat, onHistoryChange, generatingChatId, rateLimit
 }: SidebarProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -250,8 +251,48 @@ export default function Sidebar({
           )}
         </div>
 
+        {/* Rate Limit Indicator */}
+        {rateLimit && (
+          <div className="group relative px-4 py-3 bg-[#0d0f1b] border-t border-white/5 cursor-help">
+            
+            {/* Hover Tooltip */}
+            <div className="absolute bottom-full left-4 right-4 mb-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 p-3 text-[11px] text-slate-300 bg-[#1e2336] border border-white/10 rounded-xl shadow-xl shadow-black/50 pointer-events-none">
+              <p className="mb-1 text-white font-medium">Mengapa ada batas?</p>
+              <p className="leading-relaxed opacity-80">
+                Layanan ini beroperasi secara gratis menggunakan kecerdasan buatan eksternal yang dibebani biaya oleh pihak ketiga. Aturan limit ini mencegah SensiBOT mengeluarkan anggaran terlalu banyak.
+              </p>
+              <div className="mt-2 pt-2 border-t border-white/10 flex items-center gap-1.5 text-indigo-400">
+                <Zap size={12} className="fill-indigo-400" />
+                <span className="font-medium tracking-wide">Di-reset otomatis tengah malam</span>
+              </div>
+              
+              {/* Triangle pointer bottom */}
+              <div className="absolute -bottom-1.5 left-8 w-3 h-3 bg-[#1e2336] border-b border-r border-white/10 transform rotate-45"></div>
+            </div>
+
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Limit Harian</span>
+              <span className={`text-xs font-bold ${rateLimit.count >= rateLimit.limit ? 'text-red-400' : 'text-slate-300'}`}>
+                {rateLimit.count} / {rateLimit.limit}
+              </span>
+            </div>
+            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+              <div 
+                className={`h-full rounded-full transition-all duration-500 ease-out 
+                  ${rateLimit.count >= rateLimit.limit ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' 
+                  : rateLimit.count >= rateLimit.limit * 0.8 ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
+                  : 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]'}`}
+                style={{ width: `${Math.min(100, (Math.max(0, rateLimit.count) / rateLimit.limit) * 100)}%` }}
+              ></div>
+            </div>
+            {rateLimit.count >= rateLimit.limit && (
+              <p className="text-[10px] text-red-400/80 mt-1.5 leading-tight">Limit habis. Sila coba kembali esok hari.</p>
+            )}
+          </div>
+        )}
+
         {/* User Profile */}
-        <div className="p-4 border-t border-white/5 mt-auto bg-[#0d0f1b]">
+        <div className="p-4 border-t border-white/5 bg-[#0d0f1b]">
           {status === "authenticated" ? (
             <div
               className="flex items-center gap-3 w-full p-2 hover:bg-white/5 rounded-xl cursor-pointer transition-colors group"

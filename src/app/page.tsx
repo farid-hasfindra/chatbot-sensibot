@@ -44,6 +44,7 @@ export default function Home() {
 
   const [chatTitle, setChatTitle] = useState("Obrolan Baru");
   const [personaPrompt, setPersonaPrompt] = useState<string | null>(null);
+  const [rateLimit, setRateLimit] = useState({ count: 0, limit: 35 });
 
   // Load history when session is valid
   useEffect(() => {
@@ -57,7 +58,22 @@ export default function Home() {
       setCurrentChatId(null);
       setChatTitle("Obrolan Baru");
     }
+    
+    // Always fetch rate limits regardless of auth state (it handles Guest via IP too)
+    fetchRateLimit();
   }, [status]);
+
+  const fetchRateLimit = async () => {
+    try {
+      const res = await fetch("/api/user/rate-limit");
+      if (res.ok) {
+        const data = await res.json();
+        setRateLimit(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchPersona = async () => {
     try {
@@ -267,16 +283,20 @@ export default function Home() {
         fetchHistory();
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      const isLimit = error?.isLimitExceeded === true || error?.message?.includes('Batas limit harian');
       const errorMsg: Message = {
         id: uuidv4(),
         role: "assistant",
-        content: "Oops! Sepertinya terjadi kesalahan.",
+        content: isLimit 
+            ? `⚠️ **${error.message}**\n\nSilakan coba lagi besok hari atau pertimbangkan untuk login jika Anda pengguna tamu.` 
+            : "Oops! Sepertinya terjadi kesalahan. Coba lagi nanti.",
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
+      fetchRateLimit(); // Refresh usage limit after every attempt
     }
   };
 
@@ -289,8 +309,9 @@ export default function Home() {
         history={history}
         currentChatId={currentChatId}
         onSelectChat={handleSelectChat}
-        onHistoryChange={handleHistoryChange}
+        onHistoryChange={fetchHistory}
         generatingChatId={generatingChatId}
+        rateLimit={rateLimit}
       />
 
       <main className="flex-1 flex flex-col min-w-0 relative h-full">

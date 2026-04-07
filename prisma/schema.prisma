@@ -54,3 +54,12 @@ model Message {
   isRag          Boolean      @default(false)
   createdAt      DateTime     @default(now())
 }
+
+model RateLimit {
+  id         String   @id @default(cuid())
+  identifier String   // UserID (jika login) atau Alamat IP (jika Guest)
+  date       String   // Tanggal dengan format YYYY-MM-DD
+  count      Int      @default(0)
+
+  @@unique([identifier, date])
+}
