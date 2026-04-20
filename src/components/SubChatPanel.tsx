@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import ChatArea, { Message } from './ChatArea';
 import ChatInput from './ChatInput';
 import { v4 as uuidv4 } from "uuid";
 import { api } from '@/lib/api';
-import { Network, FileSearch, Minimize2, Trash2, AlertTriangle } from 'lucide-react';
+import { FileSearch, Minimize2, Trash2, AlertTriangle, GitBranch } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
 interface SubChatPanelProps {
@@ -183,9 +184,12 @@ export default function SubChatPanel({
   return (
     <div className="flex flex-col h-full bg-[#0d0f1b] relative z-10 animate-in slide-in-from-right-16 duration-300 shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
       <header className="h-14 shrink-0 flex items-center justify-between px-4 border-b border-white/5 bg-[#1e2336]/30">
-        <div className="flex items-center gap-2 text-indigo-300">
-          <Network size={16} />
-          <span className="text-sm font-semibold truncate leading-none mt-1 max-w-[180px]">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 rounded-full shrink-0">
+             <GitBranch size={12} className="text-indigo-400" />
+             <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest whitespace-nowrap">Sub-Chat</span>
+          </div>
+          <span className="text-sm font-semibold truncate leading-none mt-1 max-w-[150px] text-slate-200">
             {title || 'Eksplorasi Baru'}
           </span>
         </div>

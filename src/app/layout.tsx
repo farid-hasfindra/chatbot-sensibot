@@ -15,7 +15,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "SensiBOT | AI Engineer Portfolio",
-  description: "A production-grade, headless REST API demonstrating advanced AI Engineering patterns.",
+  description: "A production-grade, AI-powered assistant for technical exploration.",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  }
 };
 
 export default function RootLayout({

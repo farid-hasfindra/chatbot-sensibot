@@ -75,6 +75,12 @@ export default function Home() {
       setMessages([]);
       setCurrentChatId(null);
       setChatTitle("Obrolan Baru");
+      // Reset sub-chat states when logging out
+      setIsSubChatOpen(false);
+      setActiveSubChatId(null);
+      setChildChats([]);
+      setIsSubChatMinimized(false);
+      setIsSubChatDrawerOpen(false);
     }
     
     // Always fetch rate limits regardless of auth state (it handles Guest via IP too)

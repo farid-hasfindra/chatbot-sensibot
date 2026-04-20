@@ -4,7 +4,8 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Zap, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import Image from "next/image";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -35,12 +36,12 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen w-full bg-[#0b0f19] flex flex-col items-center justify-center p-4 selection:bg-indigo-500/30">
       <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 bg-indigo-500 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/20">
-            <Zap className="text-white fill-white" size={24} />
+        <div className="flex flex-col items-center mb-6">
+          <div className="w-full flex items-center justify-center mb-2">
+            <Image src="/logo.png" alt="SensiBOT Logo" width={300} height={100} style={{ objectFit: 'contain' }} priority />
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-wide">Welcome back</h1>
-          <p className="text-slate-400 text-sm mt-1">Log in to SensiBOT</p>
+          <h1 className="text-2xl font-bold text-white tracking-wide -mt-6">Welcome back</h1>
+          <p className="text-slate-400 text-sm mt-1 text-center">Log in to your SensiBOT account</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">

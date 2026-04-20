@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { Plus, MessageSquare, Menu, Zap, LogOut, LogIn, MoreHorizontal, Pencil, Trash2, X, Check, Loader2, Search, ChevronsLeft } from 'lucide-react';
+import Image from 'next/image';
 import { signOut, useSession } from "next-auth/react";
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -104,15 +105,14 @@ export default function Sidebar({
         ${isDesktopCollapsed ? 'md:-translate-x-full md:-ml-72' : 'md:translate-x-0 md:ml-0'}
       `}>
         {/* Header */}
-        <div className="p-4 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20">
-            <Zap size={18} className="text-white fill-white" />
+        <div className="pt-6 pb-4 flex items-center justify-center relative">
+          <div className="w-full flex items-center justify-center shrink-0 h-10">
+            <Image src="/logo.png" alt="SensiBOT Logo" width={200} height={45} style={{ objectFit: 'contain' }} priority />
           </div>
-          <h1 className="text-xl font-bold text-white tracking-wide">SensiBOT</h1>
-          <button onClick={toggleSidebar} className="ml-auto md:hidden text-slate-400 hover:text-white" title="Tutup Sidebar">
+          <button onClick={toggleSidebar} className="absolute right-2 top-2 md:hidden text-slate-400 hover:text-white p-2" title="Tutup Sidebar">
             <X size={20} />
           </button>
-          <button onClick={toggleDesktopCollapse} className="ml-auto hidden md:flex text-slate-500 hover:text-indigo-300 transition-colors" title="Sembunyikan Sidebar">
+          <button onClick={toggleDesktopCollapse} className="absolute right-2 top-2 hidden md:flex text-slate-500 hover:text-indigo-300 transition-colors p-2" title="Sembunyikan Sidebar">
             <ChevronsLeft size={20} />
           </button>
         </div>

@@ -1,5 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { User, Cpu, FileSearch, Zap, HardDrive, Quote, Check, Copy } from 'lucide-react';
+import React, { useRef, useEffect, useState, memo } from 'react';
+import { User, Cpu, FileSearch, HardDrive, Quote, Check, Copy } from 'lucide-react';
+import Image from 'next/image';
 import { ChatResponse } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -30,13 +31,14 @@ const MessageList = React.memo(({ messages, isLoading, isCompact }: { messages: 
           
           {/* Avatar AI */}
           {m.role === 'assistant' && (
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center shrink-0 mt-1 shadow-md shadow-black/20">
-              <Zap size={18} className="text-blue-400" />
+            <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center shrink-0 mt-1 overflow-hidden">
+              <Image src="/profile-sensibot.png" alt="AI" width={64} height={64} style={{ objectFit: 'contain' }} />
             </div>
           )}
           
           <div className={`flex flex-col gap-2 max-w-[85%] ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
             <div 
+              data-can-quote={m.role === 'assistant' ? "true" : "false"}
               className={`px-5 py-4 text-[15px] leading-relaxed relative
                 ${m.role === 'user' 
                   ? 'bg-indigo-600 text-white rounded-3xl rounded-tr-md shadow-lg shadow-indigo-500/10' 
@@ -129,8 +131,8 @@ const MessageList = React.memo(({ messages, isLoading, isCompact }: { messages: 
       {/* Loading Indicator */}
       {isLoading && (
         <div className="flex gap-4 sm:gap-6 justify-start">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center shrink-0 mt-1 shadow-md">
-             <Zap size={18} className="text-blue-400" />
+          <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center shrink-0 mt-1 overflow-hidden">
+             <Image src="/profile-sensibot.png" alt="AI" width={64} height={64} style={{ objectFit: 'contain' }} />
           </div>
           <div className="bg-[#1e2336] text-slate-200 border border-white/5 px-6 py-5 rounded-3xl rounded-tl-md flex items-center gap-2 w-24">
             <span className="w-2 h-2 rounded-full bg-slate-500 animate-bounce" style={{ animationDelay: '0ms' }}></span>
@@ -170,6 +172,23 @@ export default function ChatArea({ messages, isLoading, selectedModel, isCompact
 
     // Ensure selection is inside the chat area to avoid triggering from sidebar
     if (containerRef.current && !containerRef.current.contains(selection.anchorNode)) {
+      return;
+    }
+
+    // NEW: Ensure selection is inside an assistant message bubble (data-can-quote="true")
+    let targetNode = selection.anchorNode as Node | null;
+    let allowed = false;
+    while (targetNode && targetNode !== containerRef.current) {
+      if (targetNode instanceof HTMLElement && targetNode.getAttribute('data-can-quote') === 'true') {
+        allowed = true;
+        break;
+      }
+      targetNode = targetNode.parentNode;
+    }
+
+    if (!allowed) {
+      setQuotePosition(null);
+      setSelectedText("");
       return;
     }
 
@@ -237,11 +256,11 @@ export default function ChatArea({ messages, isLoading, selectedModel, isCompact
         </div>
       )}
       {messages.length === 0 ? (
-        <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto opacity-70 px-4">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-6">
-             <Zap size={32} />
+        <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto px-4">
+          <div className="w-full flex items-center justify-center mb-0 overflow-hidden animate-in fade-in zoom-in-95 duration-1000">
+             <Image src="/logo.png" alt="SensiBOT" width={380} height={120} style={{ objectFit: 'contain' }} priority />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2 tracking-wide">Hai! Bagaimana saya bisa membantu Anda hari ini?</h2>
+          <h2 className="text-3xl font-extrabold text-white mb-2 tracking-tight -mt-10">Hai! Bagaimana saya bisa membantu Anda hari ini?</h2>
           <p className="text-sm text-slate-400">Silakan tanyakan sesuatu atau unggah dokumen untuk dianalisa.</p>
         </div>
       ) : (
