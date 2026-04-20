@@ -117,7 +117,7 @@ export default function ChatInput({ onSendMessage, isLoading, onDocumentUploaded
   };
 
   return (
-    <div className="w-full bg-[#0b0f19] px-4 pb-6 pt-2 shrink-0">
+    <div className="w-full bg-[#0b0f19] px-2 sm:px-4 pb-4 sm:pb-6 pt-1 sm:pt-2 shrink-0">
       <div className="max-w-3xl mx-auto relative">
         
         {/* Plus Menu Popover */}

@@ -130,16 +130,16 @@ export default function PersonaSelector({ currentPrompt, onSelect }: PersonaSele
     <div className="relative" ref={menuRef}>
       <div 
         onClick={() => setIsOpen(!isOpen)}
-        className="cursor-pointer flex items-center gap-2 bg-[#131722] border border-white/10 hover:bg-[#1e2336] transition-colors py-1.5 px-3 rounded-xl text-xs sm:text-sm font-medium text-slate-200"
+        className="cursor-pointer flex items-center gap-1.5 sm:gap-2 bg-[#131722] border border-white/10 hover:bg-[#1e2336] transition-colors py-1.5 px-2.5 sm:px-3 rounded-xl text-xs sm:text-sm font-medium text-slate-200"
       >
-        <div className="w-5 h-5 rounded-md bg-purple-500/20 flex items-center justify-center text-[11px] text-white">
+        <div className="w-5 h-5 rounded-md bg-purple-500/20 flex items-center justify-center text-[11px] text-white shrink-0">
           {activeIcon}
         </div>
-        <span className="hidden sm:inline">Karakter:</span> <span className="text-purple-300 font-bold max-w-[100px] truncate">{activeName}</span>
+        <span className="text-purple-300 font-bold max-w-[50px] sm:max-w-none truncate">{activeName}</span>
       </div>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-[#1e2336] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden flex flex-col">
+        <div className="fixed inset-x-4 sm:inset-x-auto top-20 sm:absolute sm:right-0 sm:top-full sm:mt-2 sm:w-72 bg-[#1e2336] border border-white/10 rounded-xl shadow-2xl z-[100] overflow-hidden flex flex-col">
           {!isCustomMode ? (
             <div className="max-h-[70vh] overflow-y-auto">
               {/* Presets */}

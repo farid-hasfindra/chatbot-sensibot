@@ -122,9 +122,13 @@ export default function Home() {
       if (isSubChatOpenRef.current) {
         // If the Sub-Chat panel is already open, don't destroy the current session!
         // Just insert the quote into the existing child ChatInput.
-        window.dispatchEvent(new CustomEvent('insert-quote', { 
-          detail: { text: seedText, target: 'subchat' } 
-        }));
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('insert-quote', { 
+              detail: { text: seedText, target: 'subchat' } 
+            }));
+          }
+        }, 0);
       } else {
         // Force it to create a new child chat thread
         setActiveSubChatId(null); 
@@ -458,7 +462,7 @@ export default function Home() {
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <PersonaSelector currentPrompt={personaPrompt} onSelect={handleSelectPersona} />
               
               <div className="relative">
@@ -466,12 +470,12 @@ export default function Home() {
                   onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
                   className="cursor-pointer flex items-center gap-2 bg-[#131722] border border-white/10 hover:bg-[#1e2336] transition-colors py-1.5 px-3 rounded-xl text-xs sm:text-sm font-medium text-slate-200"
                 >
-                <div className="w-4 h-4 rounded-sm bg-indigo-500 flex items-center justify-center text-[10px] text-white shadow-sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  <div className="w-4 h-4 rounded-sm bg-indigo-500 flex items-center justify-center text-[10px] text-white shadow-sm shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  </div>
+                  <span className="max-w-[45px] sm:max-w-none truncate">{selectedModelObj.name}</span>
+                  <ChevronDown size={14} className="text-slate-500 ml-1 shrink-0" />
                 </div>
-                {selectedModelObj.name}
-                <ChevronDown size={14} className="text-slate-500 ml-1" />
-              </div>
 
               {isModelMenuOpen && (
                 <>
@@ -479,7 +483,8 @@ export default function Home() {
                     className="fixed inset-0 z-40"
                     onClick={() => setIsModelMenuOpen(false)}
                   />
-                  <div className="absolute right-0 top-full mt-2 w-56 bg-[#1e2336] border border-white/10 rounded-xl shadow-xl z-50 py-1 overflow-hidden">
+                  {/* Mobile-friendly fixed positioning for menus */}
+                  <div className="fixed inset-x-4 sm:inset-x-auto sm:absolute sm:right-0 top-20 sm:top-full mt-2 sm:mt-2 sm:w-56 bg-[#1e2336] border border-white/10 rounded-xl shadow-2xl z-[100] py-1 overflow-hidden">
                     {AVAILABLE_MODELS.map(model => (
                       <button
                         key={model.id}
@@ -590,7 +595,7 @@ export default function Home() {
 
         {/* Permanent Right-Side Ribbon Tab */}
         {(currentChatId && (!isSubChatOpen || isSubChatMinimized)) && (
-          <div ref={ribbonRef} className="absolute z-40 right-0 top-24 flex flex-col items-end gap-2">
+          <div ref={ribbonRef} className="absolute z-40 right-0 top-32 sm:top-24 flex flex-col items-end gap-2">
 
             {/* ── The Pill Tab Handle ── always visible ── */}
             <button
@@ -635,7 +640,7 @@ export default function Home() {
             >
               {/* Glass card */}
               <div
-                className="w-72 flex flex-col rounded-l-2xl border border-r-0 border-white/10 overflow-hidden"
+                className="w-[280px] sm:w-72 flex flex-col rounded-l-2xl border border-r-0 border-white/10 overflow-hidden"
                 style={{
                   background: 'linear-gradient(160deg, rgba(30,35,60,0.97) 0%, rgba(18,21,40,0.97) 100%)',
                   boxShadow: '-8px 8px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(99,102,241,0.08)',

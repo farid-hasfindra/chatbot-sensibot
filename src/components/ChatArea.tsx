@@ -31,8 +31,8 @@ const MessageList = React.memo(({ messages, isLoading, isCompact }: { messages: 
           
           {/* Avatar AI */}
           {m.role === 'assistant' && (
-            <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center shrink-0 mt-1 overflow-hidden">
-              <Image src="/profile-sensibot.png" alt="AI" width={64} height={64} style={{ objectFit: 'contain' }} />
+            <div className="w-9 h-9 sm:w-16 sm:h-16 flex items-center justify-center shrink-0 mt-1 overflow-hidden">
+              <Image src="/profile-sensibot.png" alt="AI" width={64} height={64} className="w-9 h-9 sm:w-16 sm:h-16" style={{ objectFit: 'contain' }} />
             </div>
           )}
           
@@ -131,8 +131,8 @@ const MessageList = React.memo(({ messages, isLoading, isCompact }: { messages: 
       {/* Loading Indicator */}
       {isLoading && (
         <div className="flex gap-4 sm:gap-6 justify-start">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center shrink-0 mt-1 overflow-hidden">
-             <Image src="/profile-sensibot.png" alt="AI" width={64} height={64} style={{ objectFit: 'contain' }} />
+          <div className="w-9 h-9 sm:w-16 sm:h-16 flex items-center justify-center shrink-0 mt-1 overflow-hidden">
+             <Image src="/profile-sensibot.png" alt="AI" width={64} height={64} className="w-9 h-9 sm:w-16 sm:h-16" style={{ objectFit: 'contain' }} />
           </div>
           <div className="bg-[#1e2336] text-slate-200 border border-white/5 px-6 py-5 rounded-3xl rounded-tl-md flex items-center gap-2 w-24">
             <span className="w-2 h-2 rounded-full bg-slate-500 animate-bounce" style={{ animationDelay: '0ms' }}></span>
@@ -212,18 +212,22 @@ export default function ChatArea({ messages, isLoading, selectedModel, isCompact
   }, []);
 
   const handleQuoteClick = () => {
-    window.dispatchEvent(new CustomEvent('insert-quote', { 
-      detail: { 
-        text: selectedText.trim(), 
-        target: isCompact ? 'subchat' : 'main' 
-      } 
-    }));
+    if (typeof window !== 'undefined') {
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('insert-quote', { 
+          detail: { 
+            text: selectedText.trim(), 
+            target: isCompact ? 'subchat' : 'main' 
+          } 
+        }));
+      }, 0);
+    }
     window.getSelection()?.removeAllRanges();
     setQuotePosition(null);
   };
 
   return (
-    <div ref={containerRef} className={`flex-1 overflow-y-auto h-full scroll-smooth ${isCompact ? 'px-3 py-6' : 'px-4 py-8 sm:px-10'}`}>
+    <div ref={containerRef} className={`flex-1 overflow-y-auto h-full scroll-smooth ${isCompact ? 'px-3 py-6' : 'px-3 py-6 sm:px-10'}`}>
       
       {/* Quote Hover Button */}
       {quotePosition && selectedText && (
@@ -243,7 +247,11 @@ export default function ChatArea({ messages, isLoading, selectedModel, isCompact
           <div className="w-[1px] h-4 bg-white/10 mx-0.5"></div>
           <button 
             onClick={() => {
-              window.dispatchEvent(new CustomEvent('create-subchat', { detail: selectedText.trim() }));
+              if (typeof window !== 'undefined') {
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('create-subchat', { detail: selectedText.trim() }));
+                }, 0);
+              }
               window.getSelection()?.removeAllRanges();
               setQuotePosition(null);
             }} 
@@ -257,10 +265,10 @@ export default function ChatArea({ messages, isLoading, selectedModel, isCompact
       )}
       {messages.length === 0 ? (
         <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto px-4">
-          <div className="w-full flex items-center justify-center mb-0 overflow-hidden animate-in fade-in zoom-in-95 duration-1000">
-             <Image src="/logo.png" alt="SensiBOT" width={380} height={120} style={{ objectFit: 'contain' }} priority />
+          <div className="w-full flex items-center justify-center mb-0 sm:mb-0 overflow-hidden animate-in fade-in zoom-in-95 duration-1000">
+             <Image src="/logo.png" alt="SensiBOT" width={200} height={60} className="sm:w-[380px] sm:h-[120px]" style={{ objectFit: 'contain' }} priority />
           </div>
-          <h2 className="text-3xl font-extrabold text-white mb-2 tracking-tight -mt-10">Hai! Bagaimana saya bisa membantu Anda hari ini?</h2>
+          <h2 className="text-xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight -mt-4 sm:-mt-10 mx-auto max-w-[280px] sm:max-w-none">Hai! Bagaimana saya bisa membantu Anda hari ini?</h2>
           <p className="text-sm text-slate-400">Silakan tanyakan sesuatu atau unggah dokumen untuk dianalisa.</p>
         </div>
       ) : (
