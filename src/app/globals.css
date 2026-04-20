@@ -24,3 +24,28 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Custom Modern Webkit Scrollbar */
+*, .scrollbar-custom {
+  scrollbar-width: thin;
+  scrollbar-color: #2a3045 transparent;
+}
+
+::-webkit-scrollbar,
+.scrollbar-custom::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track,
+.scrollbar-custom::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb,
+.scrollbar-custom::-webkit-scrollbar-thumb {
+  background: #2a3045;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover,
+.scrollbar-custom::-webkit-scrollbar-thumb:hover {
+  background: #464f70;
+}

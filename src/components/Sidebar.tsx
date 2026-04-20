@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
-import { Plus, MessageSquare, Menu, Zap, LogOut, LogIn, MoreHorizontal, Pencil, Trash2, X, Check, Loader2, Search } from 'lucide-react';
+import { Plus, MessageSquare, Menu, Zap, LogOut, LogIn, MoreHorizontal, Pencil, Trash2, X, Check, Loader2, Search, ChevronsLeft } from 'lucide-react';
 import { signOut, useSession } from "next-auth/react";
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -22,10 +22,12 @@ interface SidebarProps {
   onHistoryChange: () => void;
   generatingChatId?: string | null;
   rateLimit?: { count: number; limit: number };
+  isDesktopCollapsed?: boolean;
+  toggleDesktopCollapse?: () => void;
 }
 
 export default function Sidebar({
-  onNewChat, isOpen, toggleSidebar, history, currentChatId, onSelectChat, onHistoryChange, generatingChatId, rateLimit
+  onNewChat, isOpen, toggleSidebar, history, currentChatId, onSelectChat, onHistoryChange, generatingChatId, rateLimit, isDesktopCollapsed, toggleDesktopCollapse
 }: SidebarProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -94,10 +96,12 @@ export default function Sidebar({
       )}
 
       <aside className={`
-        fixed md:static inset-y-0 left-0 z-50 w-72 
+        fixed inset-y-0 left-0 z-50 w-72 
         bg-[#111322] border-r border-white/5 text-slate-300
-        transform transition-transform duration-300 ease-in-out flex flex-col h-full
+        transition-all duration-300 ease-in-out flex flex-col h-full
+        md:relative
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        ${isDesktopCollapsed ? 'md:-translate-x-full md:-ml-72' : 'md:translate-x-0 md:ml-0'}
       `}>
         {/* Header */}
         <div className="p-4 flex items-center gap-3">
@@ -105,8 +109,11 @@ export default function Sidebar({
             <Zap size={18} className="text-white fill-white" />
           </div>
           <h1 className="text-xl font-bold text-white tracking-wide">SensiBOT</h1>
-          <button onClick={toggleSidebar} className="ml-auto md:hidden text-slate-400 hover:text-white">
-            <Menu size={20} />
+          <button onClick={toggleSidebar} className="ml-auto md:hidden text-slate-400 hover:text-white" title="Tutup Sidebar">
+            <X size={20} />
+          </button>
+          <button onClick={toggleDesktopCollapse} className="ml-auto hidden md:flex text-slate-500 hover:text-indigo-300 transition-colors" title="Sembunyikan Sidebar">
+            <ChevronsLeft size={20} />
           </button>
         </div>
 

@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { User, Cpu, FileSearch, Zap, HardDrive } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import { User, Cpu, FileSearch, Zap, HardDrive, Quote } from 'lucide-react';
 import { ChatResponse } from '@/lib/api';
 
 export type Message = {
@@ -18,13 +18,85 @@ interface ChatAreaProps {
 
 export default function ChatArea({ messages, isLoading, selectedModel }: ChatAreaProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const [quotePosition, setQuotePosition] = useState<{ top: number, left: number } | null>(null);
+  const [selectedText, setSelectedText] = useState("");
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
+  const handleSelection = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || selection.toString().trim() === "") {
+      setQuotePosition(null);
+      setSelectedText("");
+      return;
+    }
+
+    // Ensure selection is inside the chat area to avoid triggering from sidebar
+    if (containerRef.current && !containerRef.current.contains(selection.anchorNode)) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    
+    setQuotePosition({
+      top: rect.top - 45, // 45px above the selection
+      left: rect.left + (rect.width / 2),
+    });
+    setSelectedText(selection.toString());
+  };
+
+  useEffect(() => {
+    document.addEventListener("mouseup", handleSelection);
+    document.addEventListener("keyup", handleSelection);
+    return () => {
+      document.removeEventListener("mouseup", handleSelection);
+      document.removeEventListener("keyup", handleSelection);
+    };
+  }, []);
+
+  const handleQuoteClick = () => {
+    window.dispatchEvent(new CustomEvent('insert-quote', { detail: selectedText.trim() }));
+    window.getSelection()?.removeAllRanges();
+    setQuotePosition(null);
+  };
+
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-10 h-full scroll-smooth">
+    <div ref={containerRef} className="flex-1 overflow-y-auto px-4 py-8 sm:px-10 h-full scroll-smooth">
+      
+      {/* Quote Hover Button */}
+      {quotePosition && selectedText && (
+        <div 
+          className="fixed z-50 transform -translate-x-1/2 animate-in fade-in zoom-in-95 duration-150 flex items-center gap-1.5 p-1.5 bg-[#1e2336] rounded-full border border-white/10 shadow-xl shadow-black/50"
+          style={{ top: Math.max(10, quotePosition.top - 10), left: quotePosition.left }}
+        >
+          <button 
+            onClick={handleQuoteClick} 
+            className="flex items-center gap-1.5 bg-slate-100 hover:bg-white text-slate-900 text-xs px-3.5 py-1.5 rounded-full font-bold transition-all"
+            title="Kutip untuk membalas di obrolan ini"
+          >
+            <Quote size={12} className="fill-slate-900" />
+            <span className="mb-[1px]">Kutip</span>
+          </button>
+          <div className="w-[1px] h-4 bg-white/10 mx-0.5"></div>
+          <button 
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('create-subchat', { detail: selectedText.trim() }));
+              window.getSelection()?.removeAllRanges();
+              setQuotePosition(null);
+            }} 
+            className="flex items-center gap-1.5 bg-[#2a3045] hover:bg-[#343b56] text-white text-xs px-3.5 py-1.5 rounded-full font-bold transition-all border border-indigo-500/20 hover:border-indigo-500/50"
+            title="Pecah menjadi obrolan kedalaman cabang (Sub-Chat)"
+          >
+            <FileSearch size={12} className="text-indigo-400" />
+            <span className="mb-[1px]">Dalamkan (Sub-Chat)</span>
+          </button>
+        </div>
+      )}
       {messages.length === 0 ? (
         <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto opacity-70">
           <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-6">

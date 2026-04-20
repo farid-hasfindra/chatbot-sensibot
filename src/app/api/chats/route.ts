@@ -13,7 +13,7 @@ export async function GET() {
 
     const { prisma } = await import("@/lib/prisma");
     const chats = await prisma.conversation.findMany({
-      where: { userId },
+      where: { userId, parentId: null },
       orderBy: { updatedAt: "desc" },
       select: { id: true, title: true, updatedAt: true }
     });
@@ -34,13 +34,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { title } = await req.json();
+    const { title, parentId } = await req.json();
     const { prisma } = await import("@/lib/prisma");
     
     const chat = await prisma.conversation.create({
       data: {
         title: title || "Obrolan Baru",
         userId,
+        ...(parentId && { parentId })
       }
     });
 
