@@ -1,6 +1,10 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { User, Cpu, FileSearch, Zap, HardDrive, Quote } from 'lucide-react';
+import { User, Cpu, FileSearch, Zap, HardDrive, Quote, Check, Copy } from 'lucide-react';
 import { ChatResponse } from '@/lib/api';
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import remarkGfm from 'remark-gfm';
 
 export type Message = {
   id: string;
@@ -14,9 +18,10 @@ interface ChatAreaProps {
   messages: Message[];
   isLoading: boolean;
   selectedModel: string;
+  isCompact?: boolean;
 }
 
-export default function ChatArea({ messages, isLoading, selectedModel }: ChatAreaProps) {
+export default function ChatArea({ messages, isLoading, selectedModel, isCompact = false }: ChatAreaProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -66,7 +71,7 @@ export default function ChatArea({ messages, isLoading, selectedModel }: ChatAre
   };
 
   return (
-    <div ref={containerRef} className="flex-1 overflow-y-auto px-4 py-8 sm:px-10 h-full scroll-smooth">
+    <div ref={containerRef} className={`flex-1 overflow-y-auto h-full scroll-smooth ${isCompact ? 'px-3 py-6' : 'px-4 py-8 sm:px-10'}`}>
       
       {/* Quote Hover Button */}
       {quotePosition && selectedText && (
@@ -98,7 +103,7 @@ export default function ChatArea({ messages, isLoading, selectedModel }: ChatAre
         </div>
       )}
       {messages.length === 0 ? (
-        <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto opacity-70">
+        <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto opacity-70 px-4">
           <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-6">
              <Zap size={32} />
           </div>
@@ -106,7 +111,7 @@ export default function ChatArea({ messages, isLoading, selectedModel }: ChatAre
           <p className="text-sm text-slate-400">Silakan tanyakan sesuatu atau unggah dokumen untuk dianalisa.</p>
         </div>
       ) : (
-        <div className="max-w-3xl mx-auto space-y-8 pb-10">
+        <div className={`${isCompact ? 'w-full' : 'max-w-3xl mx-auto'} space-y-8 pb-10`}>
           {messages.map((m) => (
             <div key={m.id} className={`flex gap-4 sm:gap-6 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               
@@ -126,7 +131,56 @@ export default function ChatArea({ messages, isLoading, selectedModel }: ChatAre
                     }
                   `}
                 >
-                  <p className="whitespace-pre-wrap font-sans">{m.content}</p>
+                  <div className="markdown-content prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-transparent">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: ({children}) => <p className="mb-4 last:mb-0 whitespace-pre-wrap">{children}</p>,
+                        strong: ({children}) => <strong className="font-bold text-white">{children}</strong>,
+                        ul: ({children}) => <ul className="list-disc ml-4 mb-4 space-y-1">{children}</ul>,
+                        ol: ({children}) => <ol className="list-decimal ml-4 mb-4 space-y-1">{children}</ol>,
+                        li: ({children}) => <li className="marker:text-indigo-400">{children}</li>,
+                        code({node, inline, className, children, ...props}: any) {
+                          const match = /language-(\w+)/.exec(className || '');
+                          return !inline && match ? (
+                            <div className="relative group my-4 rounded-xl overflow-hidden border border-white/10 bg-black/30">
+                              <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/5">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{match[1]}</span>
+                                <button 
+                                  onClick={() => navigator.clipboard.writeText(String(children).replace(/\n$/, ''))}
+                                  className="text-slate-500 hover:text-white transition-colors"
+                                  title="Salin Kode"
+                                >
+                                  <Copy size={14} />
+                                </button>
+                              </div>
+                              <SyntaxHighlighter
+                                {...props}
+                                style={vscDarkPlus}
+                                language={match[1]}
+                                PreTag="div"
+                                customStyle={{
+                                  margin: 0,
+                                  padding: '1rem',
+                                  background: 'transparent',
+                                  fontSize: '13px',
+                                  lineHeight: '1.6'
+                                }}
+                              >
+                                {String(children).replace(/\n$/, '')}
+                              </SyntaxHighlighter>
+                            </div>
+                          ) : (
+                            <code className="bg-white/10 rounded px-1.5 py-0.5 text-indigo-300 font-mono text-sm" {...props}>
+                              {children}
+                            </code>
+                          );
+                        }
+                      }}
+                    >
+                      {m.content}
+                    </ReactMarkdown>
+                  </div>
                 </div>
 
                 {/* Model tag & Metadata info below AI bubble */}

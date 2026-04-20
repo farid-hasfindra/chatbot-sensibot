@@ -3,7 +3,7 @@ import ChatArea, { Message } from './ChatArea';
 import ChatInput from './ChatInput';
 import { v4 as uuidv4 } from "uuid";
 import { api } from '@/lib/api';
-import { Network, FileSearch, Minimize2, Trash2 } from 'lucide-react';
+import { Network, FileSearch, Minimize2, Trash2, AlertTriangle } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
 interface SubChatPanelProps {
@@ -35,6 +35,7 @@ export default function SubChatPanel({
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeSubChatId, setActiveSubChatId] = useState<string | null>(initialSubChatId || null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (initialSubChatId) {
@@ -159,13 +160,15 @@ export default function SubChatPanel({
       onDelete();
       return;
     }
-    const confirmDelete = confirm("Apakah Anda yakin ingin menghapus Sub-Chat ini permanen?");
-    if (!confirmDelete) return;
+    setShowDeleteConfirm(true);
+  };
 
+  const confirmDeleteAction = async () => {
     try {
       if (status === "authenticated") {
         await fetch(`/api/chats/${activeSubChatId}`, { method: 'DELETE' });
       }
+      setShowDeleteConfirm(false);
       onDelete();
     } catch (error) {
       console.error("Error deleting child chat:", error);
@@ -195,7 +198,7 @@ export default function SubChatPanel({
       {/* (Old placeholder div removed here) */}
 
       <div className="flex-1 min-h-0 relative">
-        <ChatArea messages={messages} isLoading={isLoading} selectedModel={selectedModelObj.name} />
+        <ChatArea messages={messages} isLoading={isLoading} selectedModel={selectedModelObj.name} isCompact={true} />
       </div>
 
       <div className="shrink-0">
@@ -207,6 +210,35 @@ export default function SubChatPanel({
           initialQuote={(!activeSubChatId && messages.length === 0) ? initialTopicContext : null}
         />
       </div>
+
+      {/* Modern Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center p-6 bg-[#0b0f19]/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#1e2336] border border-white/10 rounded-2xl p-6 w-full max-w-xs shadow-2xl shadow-black/50 animate-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4 mx-auto">
+              <AlertTriangle className="text-red-500" size={24} />
+            </div>
+            <h3 className="text-lg font-bold text-white text-center mb-2">Hapus Sub-Chat?</h3>
+            <p className="text-sm text-slate-400 text-center mb-6 leading-relaxed">
+              Tindakan ini permanen dan riwayat percakapan cabang ini akan hilang.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                onClick={() => setShowDeleteConfirm(false)}
+                className="py-2.5 px-4 bg-white/5 hover:bg-white/10 rounded-xl text-sm font-semibold text-slate-300 transition-colors"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={confirmDeleteAction}
+                className="py-2.5 px-4 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold text-white shadow-lg shadow-red-600/20 transition-all active:scale-95"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

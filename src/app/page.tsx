@@ -36,6 +36,7 @@ export default function Home() {
   const [editingSubChatId, setEditingSubChatId] = useState<string | null>(null);
   const [editingSubChatTitle, setEditingSubChatTitle] = useState("");
   const [isUpdatingSubChat, setIsUpdatingSubChat] = useState(false);
+  const [mounted, setMounted] = useState(false);
   
   // If guest, use a transient ID. If logged in, use DB ID.
   const [transientId] = useState(() => uuidv4()); 
@@ -58,6 +59,10 @@ export default function Home() {
   const [chatTitle, setChatTitle] = useState("Obrolan Baru");
   const [personaPrompt, setPersonaPrompt] = useState<string | null>(null);
   const [rateLimit, setRateLimit] = useState({ count: 0, limit: 35 });
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Load history when session is valid
   useEffect(() => {
@@ -493,7 +498,7 @@ export default function Home() {
                  paddingRight: (isSubChatOpen && !isSubChatMinimized) 
                   ? '70px' 
                   : (isSubChatDrawerOpen && (!isSubChatOpen || isSubChatMinimized)) ? '288px' : '0px',
-                 paddingLeft: (!isDesktopSidebarCollapsed && window.innerWidth >= 768) ? '20px' : '0px',
+                 paddingLeft: (mounted && !isDesktopSidebarCollapsed && window.innerWidth >= 768) ? '20px' : '0px',
                  transition: 'all 0.35s cubic-bezier(0.4,0,0.2,1)',
                }}
           >
@@ -517,7 +522,7 @@ export default function Home() {
             
             {/* ── Quick Switcher Ribbon (Floating on the Border) ── */}
             {childChats.length > 0 && (
-              <div className="absolute left-0 -translate-x-[calc(100%+1px)] top-1/2 -translate-y-1/2 z-50 hidden md:flex flex-col gap-1.5 bg-[#181d2e]/90 backdrop-blur-md border border-r-0 border-white/10 rounded-l-xl shadow-[-8px_0_20px_rgba(0,0,0,0.4)] max-h-[70vh] overflow-y-auto scrollbar-custom p-1.5 py-2">
+              <div className="absolute left-0 -translate-x-full top-1/2 -translate-y-1/2 z-50 hidden md:flex flex-col gap-1.5 bg-[#181d2e]/95 backdrop-blur-md border border-r-0 border-white/10 rounded-l-xl shadow-[-8px_0_20px_rgba(0,0,0,0.4)] p-1.5 py-2">
                 {childChats.map((chat, i) => (
                   <button
                     key={chat.id}
@@ -528,14 +533,15 @@ export default function Home() {
                         ? 'bg-indigo-500 text-white shadow-[0_0_12px_rgba(99,102,241,0.5)]' 
                         : 'bg-white/5 text-slate-500 hover:bg-white/10 hover:text-slate-200'}
                     `}
+                    title={chat.title} // Fallback title
                   >
                     {i + 1}
                     
-                    {/* Hover Tooltip */}
-                    <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#1e2336] text-white text-xs font-medium rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap shadow-xl border border-white/10 pointer-events-none z-50">
+                    {/* Hover Tooltip (Now appearing on the RIGHT to avoid clipping) */}
+                    <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#1e2336] text-white text-xs font-medium rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap shadow-xl border border-white/10 pointer-events-none z-50">
                       {chat.title}
-                      {/* Tooltip arrow/triangle */}
-                      <div className="absolute top-1/2 -translate-y-1/2 -right-[5px] w-0 h-0 border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent border-l-[5px] border-l-[#1e2336]" />
+                      {/* Tooltip arrow/triangle (pointing left now) */}
+                      <div className="absolute top-1/2 -translate-y-1/2 -left-[5px] w-0 h-0 border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent border-r-[5px] border-r-[#1e2336]" />
                     </div>
                   </button>
                 ))}
