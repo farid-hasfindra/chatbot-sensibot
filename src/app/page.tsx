@@ -329,7 +329,12 @@ export default function Home() {
 
       // 3. Call external Python AI backend with history-aware message
       const backendId = activeChatId || transientId;
-      const apiRes = await api.chat(messageWithHistory, useRag, backendId, selectedModelObj.id, personaPrompt);
+      
+      // Enforce global formatting guardrails (like emoji limits) even for custom personas
+      const emojiGuardrail = "\n\n[PENTING: Gunakan emoji secara natural dan tidak berlebihan. Fokus pada kebersihan teks.]";
+      const finalSystemPrompt = personaPrompt ? personaPrompt + emojiGuardrail : personaPrompt;
+      
+      const apiRes = await api.chat(messageWithHistory, useRag, backendId, selectedModelObj.id, finalSystemPrompt);
 
       // 4. Save AI Response to DB
       if (status === "authenticated" && activeChatId) {

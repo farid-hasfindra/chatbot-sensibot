@@ -64,23 +64,24 @@ export default function ChatInput({ onSendMessage, isLoading, onDocumentUploaded
   // Listen for the custom "insert-quote" event dispatched by Highlight To Ask feature
   useEffect(() => {
     const handleInsertQuote = (e: Event) => {
-      // Prevent child inputs from listening to Main chat quotes if identifier doesn't match or similar.
-      // But actually, we only dispatch 'insert-quote' inside Main Chat.
-      const customEvent = e as CustomEvent<{ text: string, target?: string }>;
-      
+      const customEvent = e as CustomEvent<any>;
       let quoteText = '';
+      
       if (typeof customEvent.detail === 'string') {
-          if (identifier !== 'main') return; // default legacy event only for main
-          quoteText = customEvent.detail;
-      } else if (customEvent.detail?.text) {
-          if (customEvent.detail.target && customEvent.detail.target !== identifier) return;
-          quoteText = customEvent.detail.text;
+        // Legacy support or simple dispatch
+        if (identifier !== 'main') return; 
+        quoteText = customEvent.detail;
+      } else if (customEvent.detail && typeof customEvent.detail === 'object') {
+        // New detailed format
+        const { text, target } = customEvent.detail;
+        if (target && target !== identifier) return;
+        quoteText = text;
       }
       
       if (!quoteText) return;
-
+      
       setQuoteContext(quoteText);
-
+      
       // Automatically focus after inserting quote
       setTimeout(() => {
         textareaRef.current?.focus();

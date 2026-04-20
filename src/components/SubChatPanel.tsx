@@ -115,7 +115,12 @@ export default function SubChatPanel({
 
       // 4. Hit AI backend
       const backendId = currentId || uuidv4();
-      const apiRes = await api.chat(messageWithHistory, false, backendId, selectedModelObj.id, personaPrompt);
+      
+      // Enforce global formatting guardrails (like emoji limits) even for custom personas
+      const emojiGuardrail = "\n\n[PENTING: Gunakan emoji secara natural dan tidak berlebihan. Fokus pada kebersihan teks.]";
+      const finalSystemPrompt = personaPrompt ? personaPrompt + emojiGuardrail : personaPrompt;
+      
+      const apiRes = await api.chat(messageWithHistory, false, backendId, selectedModelObj.id, finalSystemPrompt);
 
       // 5. Simpan respons AI
       if (status === "authenticated" && currentId) {
