@@ -584,7 +584,7 @@ export default function Home() {
                   setChildChats(prev => [...prev, { 
                     id: newId, 
                     title: title || 'Eksplorasi Baru', 
-                    updatedAt: new Date().toISOString() 
+                    createdAt: new Date() 
                   }]);
                 }
               }}
