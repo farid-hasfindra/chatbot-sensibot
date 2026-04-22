@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import ChatArea, { Message } from './ChatArea';
 import ChatInput from './ChatInput';
@@ -15,7 +15,7 @@ interface SubChatPanelProps {
   title: string | null;
   onMinimize: () => void;
   onDelete: () => void;
-  onSubChatCreated: (id: string) => void;
+  onSubChatCreated: (id: string, title?: string) => void;
   selectedModelObj: any;
   personaPrompt: string | null;
 }
@@ -38,16 +38,34 @@ export default function SubChatPanel({
   const [activeSubChatId, setActiveSubChatId] = useState<string | null>(initialSubChatId || null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  const localMemory = useRef<Record<string, Message[]>>({});
+  const prevIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (initialSubChatId) {
-      setActiveSubChatId(initialSubChatId);
-      fetchMessages(initialSubChatId);
-    } else {
-      setActiveSubChatId(null);
-      setMessages([]);
-      // Jika baru pertama kali dipecah (subChatId null tapi initialTopicContext ada), AI harus siap menerima query
+    if (initialSubChatId !== prevIdRef.current) {
+      prevIdRef.current = initialSubChatId;
+      
+      if (initialSubChatId) {
+        setActiveSubChatId(initialSubChatId);
+        if (status === "authenticated") {
+          fetchMessages(initialSubChatId);
+        } else {
+          // Guest mode: Muat histori memori dari cache lokal
+          setMessages(localMemory.current[initialSubChatId] || []);
+        }
+      } else {
+        setActiveSubChatId(null);
+        setMessages([]);
+      }
     }
-  }, [initialSubChatId, initialTopicContext]);
+  }, [initialSubChatId, status]);
+
+  // Simpan memori lokal setiap kali pesan berubah untuk Guest
+  useEffect(() => {
+    if (status !== "authenticated" && activeSubChatId) {
+      localMemory.current[activeSubChatId] = messages;
+    }
+  }, [messages, activeSubChatId, status]);
 
   const fetchMessages = async (id: string) => {
     setIsLoading(true);
@@ -83,18 +101,26 @@ export default function SubChatPanel({
 
     try {
       // 1. Buat Sub-Chat ID baru jika ini adalah lemparan pertama
-      if (!currentId && status === "authenticated" && parentId) {
+      if (!currentId) {
         const title = `${initialTopicContext || content}`.substring(0, 40);
-        const res = await fetch("/api/chats", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, parentId }),
-        });
-        if (res.ok) {
-          const chatData = await res.json();
-          currentId = chatData.id;
+        if (status === "authenticated" && parentId) {
+          const res = await fetch("/api/chats", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title, parentId }),
+          });
+          if (res.ok) {
+            const chatData = await res.json();
+            currentId = chatData.id;
+            setActiveSubChatId(currentId);
+            onSubChatCreated(currentId, title);
+          }
+        } else {
+          // Mode guest: gunakan ID memori sementara
+          currentId = uuidv4();
           setActiveSubChatId(currentId);
-          onSubChatCreated(currentId!);
+          prevIdRef.current = currentId; // Mencegah reset ketika props dari parent dilempar balik
+          onSubChatCreated(currentId, title);
         }
       }
 

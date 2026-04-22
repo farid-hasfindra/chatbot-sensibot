@@ -533,8 +533,8 @@ export default function Home() {
         </div>
 
         {/* SubChat Panel Pane */}
-        {isSubChatOpen && !isSubChatMinimized && (
-          <aside className="absolute md:relative inset-y-0 right-0 w-full md:w-[40%] bg-[#0d0f1b] shadow-2xl md:shadow-none z-30 shrink-0 border-l border-indigo-500/10">
+        {isSubChatOpen && (
+          <aside className={`absolute md:relative inset-y-0 right-0 w-full md:w-[40%] bg-[#0d0f1b] shadow-2xl md:shadow-none z-30 shrink-0 border-l border-indigo-500/10 ${isSubChatMinimized ? 'hidden' : ''}`}>
             
             {/* ── Quick Switcher Ribbon (Floating on the Border) ── */}
             {childChats.length > 0 && (
@@ -572,13 +572,20 @@ export default function Home() {
               title={childChats.find(c => c.id === activeSubChatId)?.title ?? null}
               selectedModelObj={selectedModelObj}
               personaPrompt={personaPrompt}
-              onSubChatCreated={(newId) => {
+              onSubChatCreated={(newId, title) => {
                 setActiveSubChatId(newId);
                 // Refresh list if authenticated
                 if (status === "authenticated" && currentChatId) {
                   fetch(`/api/chats/${currentChatId}/children`)
                     .then(r => r.json())
                     .then(data => setChildChats(data));
+                } else {
+                  // Mode guest: Simpan riwayat sub-chat di memori lokal UI
+                  setChildChats(prev => [...prev, { 
+                    id: newId, 
+                    title: title || 'Eksplorasi Baru', 
+                    updatedAt: new Date().toISOString() 
+                  }]);
                 }
               }}
               onDelete={() => {
@@ -594,7 +601,7 @@ export default function Home() {
         )}
 
         {/* Permanent Right-Side Ribbon Tab */}
-        {(currentChatId && (!isSubChatOpen || isSubChatMinimized)) && (
+        {((currentChatId || (status === "unauthenticated" && messages.length > 0)) && (!isSubChatOpen || isSubChatMinimized)) && (
           <div ref={ribbonRef} className="absolute z-40 right-0 top-32 sm:top-24 flex flex-col items-end gap-2">
 
             {/* ── The Pill Tab Handle ── always visible ── */}
