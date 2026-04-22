@@ -113,14 +113,14 @@ export default function SubChatPanel({
             const chatData = await res.json();
             currentId = chatData.id;
             setActiveSubChatId(currentId);
-            onSubChatCreated(currentId, title);
+            onSubChatCreated(currentId!, title);
           }
         } else {
           // Mode guest: gunakan ID memori sementara
           currentId = uuidv4();
           setActiveSubChatId(currentId);
           prevIdRef.current = currentId; // Mencegah reset ketika props dari parent dilempar balik
-          onSubChatCreated(currentId, title);
+          onSubChatCreated(currentId!, title);
         }
       }
 
